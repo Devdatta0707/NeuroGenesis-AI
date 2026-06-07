@@ -5,11 +5,16 @@ import { defineConfig, loadEnv } from 'vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  // Merge .env file vars with actual process.env (Render/Vercel set these at build time)
+  const VITE_CLERK_PUBLISHABLE_KEY = process.env.VITE_CLERK_PUBLISHABLE_KEY || env.VITE_CLERK_PUBLISHABLE_KEY || '';
+  const VITE_API_BASE_URL = process.env.VITE_API_BASE_URL || env.VITE_API_BASE_URL || '';
   return {
     plugins: [react(), tailwindcss()],
-    // Only expose VITE_ prefixed vars to the client bundle — never raw API keys
     define: {
       'process.env.NODE_ENV': JSON.stringify(mode),
+      // Explicitly bake build-time env vars so they're available on all platforms
+      'import.meta.env.VITE_CLERK_PUBLISHABLE_KEY': JSON.stringify(VITE_CLERK_PUBLISHABLE_KEY),
+      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(VITE_API_BASE_URL),
     },
     resolve: {
       alias: {
