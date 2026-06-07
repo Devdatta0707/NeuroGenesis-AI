@@ -280,3 +280,5 @@ Built with data from:
 - [ClinicalTrials.gov](https://clinicaltrials.gov/) — U.S. National Library of Medicine
 - [PubMed](https://pubmed.ncbi.nlm.nih.gov/) — NCBI
 - [Google Gemini](https://ai.google.dev/) — Google DeepMind
+
+Designed and Developed By Nexvora
