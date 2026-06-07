@@ -6,16 +6,6 @@ import { Sidebar } from './components/layout/Sidebar';
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import { useAppStore } from './store/appStore';
 
-// Safe hook: returns a no-op result when called outside a ClerkProvider
-function useSafeUser() {
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    return useUser();
-  } catch {
-    return { isLoaded: true, isSignedIn: false, user: null };
-  }
-}
-
 // Pages
 import { HomePage } from './pages/HomePage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -29,7 +19,7 @@ import { ReportGeneratorPage } from './pages/ReportGeneratorPage';
 import { WorkspacePage } from './pages/WorkspacePage';
 
 // Toast Notifications
-import { Bell, X, CheckCircle, AlertTriangle, Info, AlertCircle } from 'lucide-react';
+import { X, CheckCircle, AlertTriangle, Info, AlertCircle } from 'lucide-react';
 import type { Notification } from './types';
 import { cn } from './lib/utils';
 
@@ -81,7 +71,7 @@ const PageContent: React.FC = () => {
     'molecular-docking': <MolecularDockingPage />,
     'report-generator': <ReportGeneratorPage />,
     workspace: <WorkspacePage />,
-    admin: <WorkspacePage />, // placeholder
+    admin: <WorkspacePage />,
   };
 
   const isAppPage = currentPage !== 'home';
@@ -104,8 +94,9 @@ const PageContent: React.FC = () => {
   );
 };
 
-const AppShell: React.FC = () => {
-  const { isLoaded, isSignedIn } = useSafeUser();
+// Shell used when ClerkProvider IS present — can safely call useUser
+const AppShellWithClerk: React.FC = () => {
+  const { isLoaded, isSignedIn } = useUser();
   const { currentPage, setCurrentPage, notifications, markNotificationRead } = useAppStore();
   const [showFallback, setShowFallback] = useState(false);
 
@@ -116,28 +107,25 @@ const AppShell: React.FC = () => {
     return () => clearTimeout(timer);
   }, [isLoaded]);
 
-  // Redirect to dashboard when signed in from home
   useEffect(() => {
     if (isSignedIn && currentPage === 'home') {
       setCurrentPage('dashboard');
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, currentPage, setCurrentPage]);
 
   if (!isLoaded && !showFallback) return <LoadingScreen />;
 
   const isAppPage = currentPage !== 'home';
-  const unreadNotifs = notifications.filter(n => !n.read).slice(0, 3);
+  const unreadNotifs = notifications.filter((n) => !n.read).slice(0, 3);
 
   return (
     <div className="min-h-screen bg-[#0a0f1e] bg-grid">
       <Navbar />
       {isAppPage && <Sidebar />}
       <PageContent />
-
-      {/* Toast notifications */}
       <div className="fixed bottom-6 right-6 z-[999] space-y-2">
         <AnimatePresence>
-          {unreadNotifs.map(n => (
+          {unreadNotifs.map((n) => (
             <NotificationToast
               key={n.id}
               notification={n}
@@ -150,4 +138,37 @@ const AppShell: React.FC = () => {
   );
 };
 
-export default AppShell;
+// Shell used when ClerkProvider is NOT present (no VITE_CLERK_PUBLISHABLE_KEY)
+const AppShellNoClerk: React.FC = () => {
+  const { currentPage, notifications, markNotificationRead } = useAppStore();
+
+  const isAppPage = currentPage !== 'home';
+  const unreadNotifs = notifications.filter((n) => !n.read).slice(0, 3);
+
+  return (
+    <div className="min-h-screen bg-[#0a0f1e] bg-grid">
+      <Navbar />
+      {isAppPage && <Sidebar />}
+      <PageContent />
+      <div className="fixed bottom-6 right-6 z-[999] space-y-2">
+        <AnimatePresence>
+          {unreadNotifs.map((n) => (
+            <NotificationToast
+              key={n.id}
+              notification={n}
+              onClose={() => markNotificationRead(n.id)}
+            />
+          ))}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+};
+
+// App is the default export — main.tsx decides which shell to render
+// based on whether ClerkProvider wraps it
+const App: React.FC<{ hasClerk?: boolean }> = ({ hasClerk = false }) => {
+  return hasClerk ? <AppShellWithClerk /> : <AppShellNoClerk />;
+};
+
+export default App;

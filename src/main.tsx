@@ -11,11 +11,11 @@ const root = document.getElementById('root')!;
 createRoot(root).render(
   <StrictMode>
     {PUBLISHABLE_KEY ? (
-      <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard">
-        <App />
+      <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+        <App hasClerk={true} />
       </ClerkProvider>
     ) : (
-      <App />
+      <App hasClerk={false} />
     )}
   </StrictMode>
 );
