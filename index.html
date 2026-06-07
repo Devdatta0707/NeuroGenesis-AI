@@ -13,6 +13,39 @@
   </head>
   <body class="bg-[#0a0f1e] text-white">
     <div id="root"></div>
+    <!-- Fallback shown if JS crashes — hidden once React mounts -->
+    <div id="js-error" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#0a0f1e;color:#f87171;font-family:monospace;padding:2rem;z-index:9999;overflow:auto;">
+      <h2 style="color:#f87171;margin-bottom:1rem;">⚠️ JavaScript Error — App failed to load</h2>
+      <pre id="js-error-msg" style="white-space:pre-wrap;font-size:0.85rem;color:#fca5a5;"></pre>
+    </div>
+    <script>
+      window.onerror = function(msg, src, line, col, err) {
+        var el = document.getElementById('js-error');
+        var msgEl = document.getElementById('js-error-msg');
+        if (el && msgEl) {
+          el.style.display = 'block';
+          msgEl.textContent = (err && err.stack) ? err.stack : (msg + '\n' + src + ':' + line);
+        }
+      };
+      window.addEventListener('unhandledrejection', function(e) {
+        var el = document.getElementById('js-error');
+        var msgEl = document.getElementById('js-error-msg');
+        if (el && msgEl) {
+          el.style.display = 'block';
+          msgEl.textContent += '\nUnhandled Promise: ' + (e.reason && e.reason.stack ? e.reason.stack : String(e.reason));
+        }
+      });
+      // Hide error overlay once React mounts successfully
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+          var root = document.getElementById('root');
+          if (root && root.children.length > 0) {
+            var el = document.getElementById('js-error');
+            if (el) el.style.display = 'none';
+          }
+        }, 3000);
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
