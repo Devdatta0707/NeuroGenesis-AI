@@ -5,12 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server/index.ts",
-    "build": "vite build",
+    "build": "vite build && npx tsc --project tsconfig.server.json",
     "vercel-build": "vite build",
     "preview": "vite preview",
-    "start": "node --import tsx/esm server/index.ts",
+    "start": "node dist-server/index.js",
     "lint": "tsc --noEmit",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist dist-server"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.4",
