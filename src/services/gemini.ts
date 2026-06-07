@@ -1,7 +1,6 @@
-// All Gemini calls are proxied through the backend server to avoid
-// API key exposure and browser auth issues.
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+// All AI calls are proxied through the backend server.
+// Empty string = relative URL = works on both Render (same-origin) and Vercel (api/ functions)
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 async function generateViaServer(prompt: string): Promise<string> {
   const res = await fetch(`${API_BASE}/api/gemini/generate`, {
