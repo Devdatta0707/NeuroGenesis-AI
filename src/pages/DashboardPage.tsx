@@ -4,7 +4,7 @@ import {
   Dna, FlaskConical, Brain, Activity, FileText,
   TrendingUp, Clock, Bookmark, Zap, ArrowRight
 } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from '@/lib/clerk-safe';
 import { StatCard } from '@/components/ui/Card';
 import { useAppStore } from '@/store/appStore';
 import type { NavPage } from '@/types';

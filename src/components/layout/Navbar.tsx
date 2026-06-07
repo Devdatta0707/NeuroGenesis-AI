@@ -4,7 +4,7 @@ import {
   Dna, Bell, Menu, X, ChevronDown, User, Settings,
   LogOut, BookOpen, Zap
 } from 'lucide-react';
-import { useUser, SignInButton, SignOutButton, SignedIn, SignedOut } from '@clerk/clerk-react';
+import { useUser, SignInButton, SignOutButton, SignedIn, SignedOut } from '@/lib/clerk-safe';
 import { useAppStore } from '@/store/appStore';
 import type { NavPage } from '@/types';
 import { cn } from '@/lib/utils';

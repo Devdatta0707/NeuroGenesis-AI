@@ -5,7 +5,7 @@ import {
   Activity, Zap, Shield, Globe, ArrowRight, Star,
   Cpu, Search, FileText, BarChart3
 } from 'lucide-react';
-import { SignInButton, SignedOut, SignedIn } from '@clerk/clerk-react';
+import { SignInButton, SignedOut, SignedIn } from '@/lib/clerk-safe';
 import { useAppStore } from '@/store/appStore';
 
 const FEATURES = [

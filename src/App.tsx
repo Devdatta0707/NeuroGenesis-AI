@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useUser } from '@clerk/clerk-react';
+import { useUser } from './lib/clerk-safe';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { LoadingScreen } from './components/ui/LoadingScreen';
@@ -18,27 +18,24 @@ import { MolecularDockingPage } from './pages/MolecularDockingPage';
 import { ReportGeneratorPage } from './pages/ReportGeneratorPage';
 import { WorkspacePage } from './pages/WorkspacePage';
 
-// Toast Notifications
+// Notifications
 import { X, CheckCircle, AlertTriangle, Info, AlertCircle } from 'lucide-react';
 import type { Notification } from './types';
 import { cn } from './lib/utils';
 
 const NotificationToast: React.FC<{ notification: Notification; onClose: () => void }> = ({
-  notification,
-  onClose,
+  notification, onClose,
 }) => {
   const icons = {
     success: <CheckCircle size={16} className="text-emerald-400" />,
     warning: <AlertTriangle size={16} className="text-yellow-400" />,
-    error: <AlertCircle size={16} className="text-red-400" />,
-    info: <Info size={16} className="text-blue-400" />,
+    error:   <AlertCircle  size={16} className="text-red-400" />,
+    info:    <Info         size={16} className="text-blue-400" />,
   };
-
   useEffect(() => {
     const t = setTimeout(onClose, 4000);
     return () => clearTimeout(t);
   }, [onClose]);
-
   return (
     <motion.div
       initial={{ opacity: 0, x: 60 }}
@@ -60,23 +57,20 @@ const NotificationToast: React.FC<{ notification: Notification; onClose: () => v
 
 const PageContent: React.FC = () => {
   const { currentPage, sidebarCollapsed } = useAppStore();
-
   const pages: Record<string, React.ReactNode> = {
-    dashboard: <DashboardPage />,
-    copilot: <CopilotPage />,
-    'drug-repurposing': <DrugRepurposingPage />,
-    'protein-explorer': <ProteinExplorerPage />,
+    dashboard:            <DashboardPage />,
+    copilot:              <CopilotPage />,
+    'drug-repurposing':   <DrugRepurposingPage />,
+    'protein-explorer':   <ProteinExplorerPage />,
     'disease-intelligence': <DiseaseIntelligencePage />,
-    'paper-analyzer': <PaperAnalyzerPage />,
-    'molecular-docking': <MolecularDockingPage />,
-    'report-generator': <ReportGeneratorPage />,
-    workspace: <WorkspacePage />,
-    admin: <WorkspacePage />,
+    'paper-analyzer':     <PaperAnalyzerPage />,
+    'molecular-docking':  <MolecularDockingPage />,
+    'report-generator':   <ReportGeneratorPage />,
+    workspace:            <WorkspacePage />,
+    admin:                <WorkspacePage />,
   };
-
   const isAppPage = currentPage !== 'home';
   const sidebarW = isAppPage ? (sidebarCollapsed ? 64 : 240) : 0;
-
   return (
     <AnimatePresence mode="wait">
       <motion.main
@@ -94,23 +88,19 @@ const PageContent: React.FC = () => {
   );
 };
 
-// Shell used when ClerkProvider IS present — can safely call useUser
-const AppShellWithClerk: React.FC = () => {
+const App: React.FC = () => {
+  // useUser from clerk-safe — safe to call even without ClerkProvider
   const { isLoaded, isSignedIn } = useUser();
   const { currentPage, setCurrentPage, notifications, markNotificationRead } = useAppStore();
   const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!isLoaded) setShowFallback(true);
-    }, 4000);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => { if (!isLoaded) setShowFallback(true); }, 4000);
+    return () => clearTimeout(t);
   }, [isLoaded]);
 
   useEffect(() => {
-    if (isSignedIn && currentPage === 'home') {
-      setCurrentPage('dashboard');
-    }
+    if (isSignedIn && currentPage === 'home') setCurrentPage('dashboard');
   }, [isSignedIn, currentPage, setCurrentPage]);
 
   if (!isLoaded && !showFallback) return <LoadingScreen />;
@@ -126,49 +116,12 @@ const AppShellWithClerk: React.FC = () => {
       <div className="fixed bottom-6 right-6 z-[999] space-y-2">
         <AnimatePresence>
           {unreadNotifs.map((n) => (
-            <NotificationToast
-              key={n.id}
-              notification={n}
-              onClose={() => markNotificationRead(n.id)}
-            />
+            <NotificationToast key={n.id} notification={n} onClose={() => markNotificationRead(n.id)} />
           ))}
         </AnimatePresence>
       </div>
     </div>
   );
-};
-
-// Shell used when ClerkProvider is NOT present (no VITE_CLERK_PUBLISHABLE_KEY)
-const AppShellNoClerk: React.FC = () => {
-  const { currentPage, notifications, markNotificationRead } = useAppStore();
-
-  const isAppPage = currentPage !== 'home';
-  const unreadNotifs = notifications.filter((n) => !n.read).slice(0, 3);
-
-  return (
-    <div className="min-h-screen bg-[#0a0f1e] bg-grid">
-      <Navbar />
-      {isAppPage && <Sidebar />}
-      <PageContent />
-      <div className="fixed bottom-6 right-6 z-[999] space-y-2">
-        <AnimatePresence>
-          {unreadNotifs.map((n) => (
-            <NotificationToast
-              key={n.id}
-              notification={n}
-              onClose={() => markNotificationRead(n.id)}
-            />
-          ))}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-};
-
-// App is the default export — main.tsx decides which shell to render
-// based on whether ClerkProvider wraps it
-const App: React.FC<{ hasClerk?: boolean }> = ({ hasClerk = false }) => {
-  return hasClerk ? <AppShellWithClerk /> : <AppShellNoClerk />;
 };
 
 export default App;
