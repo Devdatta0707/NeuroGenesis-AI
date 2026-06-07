@@ -12,6 +12,12 @@ RUN npm ci --frozen-lockfile --ignore-scripts
 
 # Build frontend
 FROM deps AS builder
+# Accept Vite build-time env vars as build args
+# These get baked into the JS bundle — only use VITE_ prefixed public keys here
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ARG VITE_API_BASE_URL
+ENV VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 COPY . .
 # Remove any local .env to prevent baking secrets into the image
 RUN rm -f .env

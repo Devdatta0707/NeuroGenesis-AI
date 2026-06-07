@@ -6,6 +6,16 @@ import { Sidebar } from './components/layout/Sidebar';
 import { LoadingScreen } from './components/ui/LoadingScreen';
 import { useAppStore } from './store/appStore';
 
+// Safe hook: returns a no-op result when called outside a ClerkProvider
+function useSafeUser() {
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    return useUser();
+  } catch {
+    return { isLoaded: true, isSignedIn: false, user: null };
+  }
+}
+
 // Pages
 import { HomePage } from './pages/HomePage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -95,7 +105,7 @@ const PageContent: React.FC = () => {
 };
 
 const AppShell: React.FC = () => {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn } = useSafeUser();
   const { currentPage, setCurrentPage, notifications, markNotificationRead } = useAppStore();
   const [showFallback, setShowFallback] = useState(false);
 

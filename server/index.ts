@@ -13,12 +13,16 @@ dotenv.config();
 
 // ===================== STARTUP SECRET VALIDATION =====================
 
-const REQUIRED_SECRETS = ['GROQ_API_KEY', 'VITE_CLERK_PUBLISHABLE_KEY'];
+const REQUIRED_SECRETS = ['GROQ_API_KEY'];
 const missing = REQUIRED_SECRETS.filter((k) => !process.env[k]);
 if (missing.length > 0) {
-  console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
-  console.error('   Copy .env.example to .env and fill in all required values.');
-  process.exit(1);
+  console.warn(`⚠️  Missing environment variables: ${missing.join(', ')}`);
+  console.warn('   Some AI features will be disabled. Copy .env.example to .env and fill in all required values.');
+}
+
+// Warn (not crash) about optional auth key
+if (!process.env.VITE_CLERK_PUBLISHABLE_KEY) {
+  console.warn('⚠️  VITE_CLERK_PUBLISHABLE_KEY not set — authentication will be disabled.');
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -51,7 +55,23 @@ app.use(
         styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
         fontSrc: ["'self'", 'https://fonts.gstatic.com'],
         imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-        connectSrc: ["'self'", 'https://api.clerk.dev', 'https://clerk.neurogenesis-ai.com'],
+        connectSrc: [
+          "'self'",
+          // Clerk auth
+          'https://*.clerk.accounts.dev',
+          'https://api.clerk.dev',
+          'https://clerk.neurogenesis-ai.com',
+          // Render backend (Vercel frontend → Render API)
+          'https://*.onrender.com',
+          // External biomedical APIs (called directly from browser)
+          'https://pubchem.ncbi.nlm.nih.gov',
+          'https://rest.uniprot.org',
+          'https://www.ebi.ac.uk',
+          'https://data.rcsb.org',
+          'https://clinicaltrials.gov',
+          'https://eutils.ncbi.nlm.nih.gov',
+          'https://pubmed.ncbi.nlm.nih.gov',
+        ],
         frameSrc: ["'none'"],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: IS_PROD ? [] : null,
@@ -69,11 +89,18 @@ app.use(
 app.disable('x-powered-by');
 
 // Strict CORS — only allow configured origins
+// In production, falls back to allowing *.vercel.app and *.onrender.com if ALLOWED_ORIGINS not set
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
   : IS_PROD
-  ? [] // no wildcard in production — must set ALLOWED_ORIGINS
+  ? [] // populated dynamically via origin pattern below
   : ['http://localhost:3000', 'http://localhost:5173'];
+
+const PROD_ORIGIN_PATTERNS = [
+  /\.vercel\.app$/,
+  /\.onrender\.com$/,
+  /neurogenesis/i, // catches custom domains with "neurogenesis" in them
+];
 
 app.use(
   cors({
@@ -82,6 +109,8 @@ app.use(
       if (!origin) return callback(null, true);
       if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
       if (!IS_PROD) return callback(null, true); // permissive in dev
+      // Allow Vercel preview/production and Render origins by default
+      if (PROD_ORIGIN_PATTERNS.some((p) => p.test(origin))) return callback(null, true);
       log.warn('CORS blocked', { origin });
       callback(new Error('Not allowed by CORS'));
     },
@@ -406,9 +435,9 @@ app.get(
 
 // ===================== GROQ AI PROXY =====================
 
-function getGroqClient(): Groq {
+function getGroqClient(): Groq | null {
   const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new Error('GROQ_API_KEY not configured');
+  if (!apiKey) return null;
   return new Groq({ apiKey });
 }
 
@@ -426,6 +455,9 @@ app.post(
     try {
       const { prompt } = req.body as { prompt: string };
       const client = getGroqClient();
+      if (!client) {
+        return res.status(503).json({ error: 'AI service not configured. Please set GROQ_API_KEY.' });
+      }
       const completion = await client.chat.completions.create({
         model: GROQ_MODEL,
         messages: [
@@ -453,6 +485,9 @@ app.post(
     try {
       const { prompt } = req.body as { prompt: string };
       const client = getGroqClient();
+      if (!client) {
+        return res.status(503).json({ error: 'AI service not configured. Please set GROQ_API_KEY.' });
+      }
 
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
